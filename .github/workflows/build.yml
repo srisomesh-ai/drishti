@@ -5,6 +5,9 @@ on:
     branches: [main]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -36,3 +39,18 @@ jobs:
         with:
           name: Drishti-apk
           path: Drishti-test.apk
+
+      - name: Publish to "latest" release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release delete latest -y --cleanup-tag || true
+          gh release create latest Drishti-test.apk -t "Drishti test build" -n "Built from ${GITHUB_SHA::7}"
+
+      - name: Push APK to apk branch
+        run: |
+          mkdir /tmp/apk && cp Drishti-test.apk /tmp/apk/ && cd /tmp/apk
+          git init -q -b apk
+          git config user.name "github-actions"; git config user.email "actions@github.com"
+          git add Drishti-test.apk && git commit -q -m "APK ${GITHUB_SHA::7}"
+          git push -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${GITHUB_REPOSITORY}" apk
