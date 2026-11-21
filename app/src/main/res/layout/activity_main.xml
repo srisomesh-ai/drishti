@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#000000"
+    android:orientation="vertical">
+
+    <TextView
+        android:id="@+id/status"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="12dp"
+        android:text="Starting…"
+        android:textColor="#FFC107"
+        android:textSize="22sp"
+        android:textStyle="bold"
+        android:accessibilityLiveRegion="polite" />
+
+    <FrameLayout
+        android:id="@+id/cameraArea"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:contentDescription="Camera view. Double tap to describe what is in front of you.">
+
+        <androidx.camera.view.PreviewView
+            android:id="@+id/preview"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:importantForAccessibility="no" />
+
+        <com.bharatgps.drishti.OverlayView
+            android:id="@+id/overlay"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:importantForAccessibility="no" />
+    </FrameLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/btnDescribe"
+            style="@style/BigButton"
+            android:text="Describe" />
+
+        <Button
+            android:id="@+id/btnAddPerson"
+            style="@style/BigButton"
+            android:text="Add Person" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/btnPeople"
+            style="@style/BigButton"
+            android:text="People" />
+
+        <Button
+            android:id="@+id/btnPause"
+            style="@style/BigButton"
+            android:text="Pause" />
+    </LinearLayout>
+</LinearLayout>
