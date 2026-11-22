@@ -16,7 +16,10 @@ class Guide(private val speaker: Speaker) {
 
     private val history = HashMap<String, ArrayDeque<Pair<Long, Float>>>()
     private val lastSaid = HashMap<String, Long>()
-    private var lastObjKey = ""
+    private val announcedTier = HashMap<String, Int>()
+    private val objLastSeen = HashMap<String, Long>()
+    private val announcedFaces = HashSet<String>()
+    private val faceLastSeen = HashMap<String, Long>()
     private var lastObjTime = 0L
     private var lastBuzz = 0L
 
@@ -30,15 +33,21 @@ class Guide(private val speaker: Speaker) {
         latestFaces = faces
 
         // ---- 1. People we know (highest value to the user) ----
+        // forget people/objects that have been out of view for a while, so they are announced again when they return
+        val namesNow = faces.mapNotNull { it.name }.toSet()
+        for (n in namesNow) faceLastSeen[n] = now
+        faceLastSeen.entries.removeAll { now - it.value > 15_000 }
+        announcedFaces.retainAll(faceLastSeen.keys)
+
         for (f in faces) {
             if (f.name != null) {
-                if (throttle("face:${f.name}", now, 10_000)) {
+                if (announcedFaces.add(f.name)) {
                     speaker.say("${f.name} ${facePos(f.rect)}", urgent = true)
                     speaker.buzz(60, 120)
                     return "${f.name} ${facePos(f.rect)}"
                 }
             } else if (f.stableMs > 1200 && f.rect.width() > 0.18f) {
-                if (throttle("face:unknown", now, 12_000)) {
+                if (throttle("face:unknown", now, 45_000)) {
                     speaker.say("Unknown person ${facePos(f.rect)}")
                     return "Unknown person ${facePos(f.rect)}"
                 }
@@ -64,12 +73,12 @@ class Guide(private val speaker: Speaker) {
         // Danger: big object straight ahead
         if (s > 0.72f && pos == "ahead") {
             if (now - lastBuzz > 400) { speaker.buzz(150, 255); lastBuzz = now }
-            if (throttle("danger", now, 2500)) speaker.say("Stop. $name very close ahead", urgent = true)
+            if (throttle("danger", now, 6000)) speaker.say("Stop. $name very close ahead", urgent = true)
             return "STOP – $name very close ahead"
         }
         if (approaching && s > 0.3f) {
             if (now - lastBuzz > 700) { speaker.buzz(80, 180); lastBuzz = now }
-            if (throttle("approach:${primary.label}", now, 3000)) speaker.say("$name coming closer, $pos", urgent = true)
+            if (throttle("approach:${primary.label}", now, 8000)) speaker.say("$name coming closer, $pos", urgent = true)
             return "$name coming closer, $pos"
         }
 
@@ -79,10 +88,14 @@ class Guide(private val speaker: Speaker) {
             else -> ""
         }
         val msg = listOf(name, pos, dist).filter { it.isNotEmpty() }.joinToString(", ")
-        val key = "${primary.label}|$pos|$dist"
-        val repeatAfter = if (dist.isEmpty()) 12_000 else 6_000
-        if ((key != lastObjKey && now - lastObjTime > 1800) || now - lastObjTime > repeatAfter) {
-            if (speaker.say(msg)) { lastObjKey = key; lastObjTime = now }
+        // Speak an object only once; speak again only if it got closer (far -> close -> very close).
+        val tier = when { s > 0.72f -> 2; s > 0.4f -> 1; else -> 0 }
+        for (l in bestPerLabel.keys) objLastSeen[l] = now
+        objLastSeen.entries.removeAll { now - it.value > 8000 }
+        announcedTier.keys.retainAll(objLastSeen.keys)
+        val prevTier = announcedTier[primary.label]
+        if ((prevTier == null || tier > prevTier) && now - lastObjTime > 2500) {
+            if (speaker.say(msg)) { announcedTier[primary.label] = tier; lastObjTime = now }
         }
         return msg
     }
